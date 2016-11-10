@@ -34,7 +34,7 @@ var Events = require("./events.js");
 // Command: help
 //
 controller.hears(["help", "who are you"], 'direct_message,direct_mention,mention', function (bot, message) {
-    var text = "I am a bot, can help you find current and upcoming events at <https://developer.cisco.com|Cisco DevNet>\nCommands I understand: now, next [max], about";
+    var text = "I am a bot, can help you find current and upcoming events at <https://developer.cisco.com|Cisco DevNet>\nCommands I understand: now, next [max], about [index]";
     bot.reply(message, { "unfurl_links": false, "text": text });
 });
 
@@ -53,6 +53,11 @@ controller.hears(['now', 'current'], 'direct_message,direct_mention,mention', fu
         }
 
         bot.reply(message, { "unfurl_links": false, "text": text });
+
+        if (events.length == 0) {
+            bot.reply(message, "_Type next for upcoming events_");
+            return;
+        }
 
         // Store events
         var toPersist = { "id": message.user, "events": events };

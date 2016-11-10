@@ -1,7 +1,7 @@
 {
-  "name": "devnet-botkit",
+  "name": "devnet-botkit-sample",
   "version": "0.1.0",
-  "description": "Bot that shows current and upcoming events at Cisco DevNet",
+  "description": "a BotKit example that interacts with Cisco DevNet events",
   "main": "bot.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

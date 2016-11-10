@@ -42,13 +42,13 @@ module.exports.fetchNext = function (limit, cb) {
     request(options, function (error, response, body) {
         if (error) {
             debug("could not retreive list of events, error: " + error);
-            cb(new Error("Could not retreive upcoming events, sorry [Events API not responding]"), null);
+            cb(new Error("Could not retreive upcoming events, sorry [Events API not responding]"), null, null);
             return;
         }
 
         if ((response < 200) || (response > 299)) {
             console.log("could not retreive list of events, response: " + response);
-            sparkCallback(new Error("Could not retreive upcoming events, sorry [bad anwser from Events API]"), null);
+            sparkCallback(new Error("Could not retreive upcoming events, sorry [bad anwser from Events API]"), null, null);
             return;
         }
 
@@ -57,7 +57,7 @@ module.exports.fetchNext = function (limit, cb) {
         fine(JSON.stringify(events));
 
         if (events.length == 0) {
-            cb(null, "*Guess what? No upcoming event!*");
+            cb(null, events, "*Guess what? No upcoming event!*");
             return;
         }
 
@@ -89,13 +89,13 @@ module.exports.fetchCurrent = function (cb) {
     request(options, function (error, response, body) {
         if (error) {
             debug("could not retreive list of events, error: " + error);
-            cb(new Error("Could not retreive current events, sorry [Events API not responding]"), null);
+            cb(new Error("Could not retreive current events, sorry [Events API not responding]"), null, null);
             return;
         }
 
         if ((response < 200) || (response > 299)) {
             console.log("could not retreive list of events, response: " + response);
-            sparkCallback(new Error("Could not retreive current events, sorry [bad anwser from Events API]"), null);
+            sparkCallback(new Error("Could not retreive current events, sorry [bad anwser from Events API]"), null, null);
             return;
         }
 
@@ -104,7 +104,7 @@ module.exports.fetchCurrent = function (cb) {
         fine(JSON.stringify(events));
 
         if (events.length == 0) {
-            cb(null, "*No event is currently going on. May you check for upcoming events...*");
+            cb(null, events, "*Found no event currently going on.*");
             return;
         }
 
@@ -135,7 +135,7 @@ module.exports.generateEventsDetails = function (event) {
     md += "\n_" + event.category + " in " + event.city + " (" + event.country + ")";
     if (event.beginDay != event.endDay) {
         md += " from " + event.beginDayInWeek + " " + event.beginDay + ", " + event.beginTime;
-        md + " till " + event.endDayInWeek + " " + event.endDay + ", " + event.endTime;
+        md += " till " + event.endDayInWeek + " " + event.endDay + ", " + event.endTime;
     }
     else {
         md += " on " + event.beginDayInWeek + " " + event.beginDay + ", from " + event.beginTime + " till " + event.endTime;
