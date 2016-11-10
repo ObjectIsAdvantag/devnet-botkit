@@ -62,16 +62,18 @@ module.exports.fetchNext = function (limit, cb) {
         }
 
         var nb = events.length;
-        var msg = "*" + nb + " upcoming events:*";
+        var msg = "*found " + nb + " upcoming events:*";
         if (nb == 1) {
-            msg = "*1 upcoming event:*";
+            msg = "*only one upcoming event:*";
         }
         for (var i = 0; i < nb; i++) {
             var current = events[i];
-            msg += "\n:small_blue_diamond: " + current.beginDay + " - " + current.endDay + ": <" + current.url + "|" + current.name + ">, " + current.city + " (" + current.country + ")";
+            //msg += "\n:small_blue_diamond: "
+            msg += "\n*" + (i+1) + ".* ";
+            msg += current.beginDay + " - " + current.endDay + ": <" + current.url + "|" + current.name + ">, " + current.city + " (" + current.country + ")";
         }
 
-        cb(null, msg);
+        cb(null, events, msg);
     });
 }
 
@@ -109,11 +111,13 @@ module.exports.fetchCurrent = function (cb) {
         var nb = events.length;
         var msg = "*" + nb + " events are running now:*";
         if (nb == 1) {
-            msg = "*1 event is running now:*";
+            msg = "*only one event is running now:*";
         }
         for (var i = 0; i < nb; i++) {
             var current = events[i];
-            msg += "\n:small_blue_diamond: " + current.beginDay + " - " + current.endDay + ": <" + current.url + "|" + current.name + ">, " + current.city + " (" + current.country + ")";
+            //msg += "\n:small_blue_diamond: "
+            msg += "\n*" + (i+1) + ".* ";
+            msg += current.beginDay + " - " + current.endDay + ": <" + current.url + "|" + current.name + ">, " + current.city + " (" + current.country + ")";
         }
 
         cb(null, events, msg);

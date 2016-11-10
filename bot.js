@@ -23,8 +23,18 @@ var bot = controller.spawn({
 // event API wrapper that preformats messages to send back to Slack
 var Events = require("./events.js");
 
+
 //
+// Command: help
 //
+controller.hears(["help", "who are you"], 'direct_message,direct_mention,mention', function (bot, message) {
+    var text = "I am a bot, can help you find current and upcoming events at <https://developer.cisco.com|Cisco DevNet>\nCommands I understand: now, next [max], about";
+    bot.reply(message, { "unfurl_links": false, "text": text });
+});
+
+
+//
+// Command: now
 //
 controller.hears(['now', 'current'], 'direct_message,direct_mention,mention', function (bot, message) {
 
@@ -36,55 +46,58 @@ controller.hears(['now', 'current'], 'direct_message,direct_mention,mention', fu
             return;
         }
 
-        bot.reply(message, text);
+        bot.reply(message, { "unfurl_links": false, "text": text });
 
         // Store events
-        //var toStore = { ordered: events };
         var toPersist = { "id": message.user, "events": events };
         controller.storage.users.save(toPersist, function (err, id) {
-            bot.reply(message, "_Type about [number] to get more details for an event_");
+            bot.reply(message, "_Type about [number] for more details_");
         });
     });
 });
 
 
 //
-//
+// Command: next
 //
 controller.hears(['next\s*(.*)', 'upcomings*(.*)', 'events*(.*)'], 'direct_message,direct_mention,mention', function (bot, message) {
 
     bot.reply(message, "_heard you! asking my crystal ball..._");
 
     var limit = parseInt(message.match[1]);
-    //var limit = parseInt(command.args[0]);
     if (!limit) limit = 5;
     if (limit < 1) limit = 1;
 
-    Events.fetchNext(limit, function (err, events) {
+    Events.fetchNext(limit, function (err, events, text) {
         if (err) {
             bot.reply(message, "*sorry, ball seems broken  :-(*");
             return;
         }
 
-        bot.reply(message, events);
+        bot.reply(message, { "unfurl_links": false, "text": text });
+
+        // Store events
+        var toPersist = { "id": message.user, "events": events };
+        controller.storage.users.save(toPersist, function (err, id) {
+            bot.reply(message, "_Type about [number] for more details_");
+        });
     });
 
 });
 
 
 //
-//
+// Command: about
 //
 controller.hears(['show\s*(.*)', 'more\s*(.*)', 'about\s*(.*)'], 'direct_message,direct_mention,mention', function (bot, message) {
 
     var keyword = message.match[1];
     if (!keyword) {
         bot.startConversation(message, function (err, convo) {
-            convo.ask("Which event are you inquiring about? (type a number, a keyword or cancel)", [
+            convo.ask("Which event are you inquiring about? (type a number or cancel)", [
                 {
                     pattern: "cancel",
                     callback: function (response, convo) {
-                        //convo.say("as you wish!");
                         convo.next();
                     }
                 },
@@ -92,25 +105,23 @@ controller.hears(['show\s*(.*)', 'more\s*(.*)', 'about\s*(.*)'], 'direct_message
                     pattern: "([0-9]+)\s*",
                     callback: function (response, convo) {
                         var value = parseInt(response.match[1]);
-                        //convo.say("Picking event number " + keyword);
                         convo.setVar("number", value);
                         convo.next();
                     }
                 },
-                {
-                    pattern: "([a-zA-Z]+)\s*",
-                    callback: function (response, convo) {
-                        var value = response.match[1];
-                        //convo.say("Picking event with keyword " + keyword);
-                        convo.setVar("keyword", value);
-                        convo.next();
-                    }
-                },
+                // {
+                //     pattern: "([a-zA-Z]+)\s*",
+                //     callback: function (response, convo) {
+                //         var value = response.match[1];
+                //         convo.setVar("keyword", value);
+                //         convo.next();
+                //     }
+                // },
                 {
                     default: true,
                     callback: function (response, convo) {
                         // just repeat the question
-                        convo.say("Sorry I did not understand, either specify a number or a keyword (a-Z)");
+                        convo.say("Sorry I did not understand, either specify a number or cancel");
                         convo.repeat();
                         convo.next();
                     }
@@ -123,29 +134,11 @@ controller.hears(['show\s*(.*)', 'more\s*(.*)', 'about\s*(.*)'], 'direct_message
                     //var about = convo.extractResponse('about');
                     var number = convo.vars["number"];
                     if (number) {
-                        // Extracting 
-                        controller.storage.users.get(message.user, function (err, user_data) {
-                            if (!user_data) {
-                                bot.reply(message, "Please look for current or upcoming events, before inquiring about event details");
-                                return;
-                            }
-
-                            var events = user_data["events"];
-                            if (number <= 0) number = 1;
-                            if (number > events.length) number = events.length;
-                            if (number == 0) {
-                                bot.reply(message, "sorry, seems we don't have any event to display details for");
-                                return;
-                            }
-
-                            var event = events[number - 1];
-                            bot.reply(message, Events.generateEventsDetails(event));
-                        });
-
+                        displayEvent(bot, controller, message, number);
                         return;
                     }
 
-                    var keyword = convo.vars["keyword"];
+                    // not cancel, nor a number
                     bot.reply(message, "sorry, not implemented yet! please specify a number for now...");
                 }
                 else {
@@ -157,17 +150,40 @@ controller.hears(['show\s*(.*)', 'more\s*(.*)', 'about\s*(.*)'], 'direct_message
         return;
     }
 
-    // Respond from arguments
+    // Check arg for number
+    var number = parseInt(keyword);
+    if (number) {
+        displayEvent(bot, controller, message, number);
+        return;
+    }
+    
+    // Not a number
     bot.reply(message, "sorry, not implemented yet!");
 });
 
 
 //
+// Utilities
 //
-//
-controller.hears(["help", "who are you"], 'direct_message,direct_mention,mention', function (bot, message) {
-    bot.reply(message, "I am a bot, can help you find current and upcoming events at <https://developer.cisco.com|Cisco DevNet>\nCommands I understand: now, next, about");
-});
 
+function displayEvent(bot, controller, message, number) {
+    controller.storage.users.get(message.user, function (err, user_data) {
+        if (!user_data) {
+            bot.reply(message, "Please look for current or upcoming events, before inquiring about event details");
+            return;
+        }
+
+        var events = user_data["events"];
+        if (number <= 0) number = 1;
+        if (number > events.length) number = events.length;
+        if (number == 0) {
+            bot.reply(message, "sorry, seems we don't have any event to display details for");
+            return;
+        }
+
+        var event = events[number - 1];
+        bot.reply(message, { "unfurl_links": false, "text": Events.generateEventsDetails(event) });
+    });
+}
 
 
