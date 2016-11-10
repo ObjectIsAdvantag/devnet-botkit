@@ -23,21 +23,34 @@ var bot = controller.spawn({
 // event API wrapper that preformats messages to send back to Slack
 var Events = require("./events.js");
 
+//
+//
+//
 controller.hears(['now', 'current'], 'direct_message,direct_mention,mention', function (bot, message) {
 
     bot.reply(message, "_heard you! let's check what's happening now..._");
 
-    Events.fetchCurrent(function (err, events) {
+    Events.fetchCurrent(function (err, events, text) {
         if (err) {
             bot.reply(message, "*sorry, could not contact the organizers :-(*");
             return;
         }
 
-        bot.reply(message, events);
-    });
+        bot.reply(message, text);
 
+        // Store events
+        //var toStore = { ordered: events };
+        var toPersist = { "id": message.user, "events": events };
+        controller.storage.users.save(toPersist, function (err, id) {
+            bot.reply(message, "_Type about [number] to get more details for an event_");
+        });
+    });
 });
 
+
+//
+//
+//
 controller.hears(['next\s*(.*)', 'upcomings*(.*)', 'events*(.*)'], 'direct_message,direct_mention,mention', function (bot, message) {
 
     bot.reply(message, "_heard you! asking my crystal ball..._");
@@ -59,6 +72,9 @@ controller.hears(['next\s*(.*)', 'upcomings*(.*)', 'events*(.*)'], 'direct_messa
 });
 
 
+//
+//
+//
 controller.hears(['show\s*(.*)', 'more\s*(.*)', 'about\s*(.*)'], 'direct_message,direct_mention,mention', function (bot, message) {
 
     var keyword = message.match[1];
@@ -103,12 +119,34 @@ controller.hears(['show\s*(.*)', 'more\s*(.*)', 'about\s*(.*)'], 'direct_message
 
             convo.on('end', function (convo) {
                 if (convo.status == 'completed') {
-                    var about = convo.extractResponse('about');
+
+                    //var about = convo.extractResponse('about');
                     var number = convo.vars["number"];
+                    if (number) {
+                        // Extracting 
+                        controller.storage.users.get(message.user, function (err, user_data) {
+                            if (!user_data) {
+                                bot.reply(message, "Please look for current or upcoming events, before inquiring about event details");
+                                return;
+                            }
+
+                            var events = user_data["events"];
+                            if (number <= 0) number = 1;
+                            if (number > events.length) number = events.length;
+                            if (number == 0) {
+                                bot.reply(message, "sorry, seems we don't have any event to display details for");
+                                return;
+                            }
+
+                            var event = events[number - 1];
+                            bot.reply(message, Events.generateEventsDetails(event));
+                        });
+
+                        return;
+                    }
+
                     var keyword = convo.vars["keyword"];
-
-                    bot.reply(message, "Looking for your event... (with keyword " + about + ")");
-
+                    bot.reply(message, "sorry, not implemented yet! please specify a number for now...");
                 }
                 else {
                     // this happens if the conversation was cancelled or ended prematurely for some reason
@@ -119,121 +157,17 @@ controller.hears(['show\s*(.*)', 'more\s*(.*)', 'about\s*(.*)'], 'direct_message
         return;
     }
 
-    bot.reply(message, "Looking for your event... (with keyword " + keyword + ")");
+    // Respond from arguments
+    bot.reply(message, "sorry, not implemented yet!");
+});
+
+
+//
+//
+//
+controller.hears(["help", "who are you"], 'direct_message,direct_mention,mention', function (bot, message) {
+    bot.reply(message, "I am a bot, can help you find current and upcoming events at <https://developer.cisco.com|Cisco DevNet>\nCommands I understand: now, next, about");
 });
 
 
 
-
-/*
-controller.storage.users.get(message.user, function(err, user) {
-    if (!user) {
-        user = {
-            id: message.user,
-        };
-    }
-    user.name = name;
-    controller.storage.users.save(user, function(err, id) {
-        bot.reply(message, 'Got it. I will call you ' + user.name + ' from now on.');
-    });
-});
-*/
-
-controller.hears(['what is my name', 'who am i'], 'direct_message,direct_mention,mention', function (bot, message) {
-
-    controller.storage.users.get(message.user, function (err, user) {
-        if (user && user.name) {
-            bot.reply(message, 'Your name is ' + user.name);
-        } else {
-            bot.startConversation(message, function (err, convo) {
-                if (!err) {
-                    convo.say('I do not know your name yet!');
-                    convo.ask('What should I call you?', function (response, convo) {
-                        convo.ask('You want me to call you `' + response.text + '`?', [
-                            {
-                                pattern: 'yes',
-                                callback: function (response, convo) {
-                                    // since no further messages are queued after this,
-                                    // the conversation will end naturally with status == 'completed'
-                                    convo.next();
-                                }
-                            },
-                            {
-                                pattern: 'no',
-                                callback: function (response, convo) {
-                                    // stop the conversation. this will cause it to end with status == 'stopped'
-                                    convo.stop();
-                                }
-                            },
-                            {
-                                default: true,
-                                callback: function (response, convo) {
-                                    convo.repeat();
-                                    convo.next();
-                                }
-                            }
-                        ]);
-
-                        convo.next();
-
-                    }, { 'key': 'nickname' }); // store the results in a field called nickname
-
-                    convo.on('end', function (convo) {
-                        if (convo.status == 'completed') {
-                            bot.reply(message, 'OK! I will update my dossier...');
-
-                            controller.storage.users.get(message.user, function (err, user) {
-                                if (!user) {
-                                    user = {
-                                        id: message.user,
-                                    };
-                                }
-                                user.name = convo.extractResponse('nickname');
-                                controller.storage.users.save(user, function (err, id) {
-                                    bot.reply(message, 'Got it. I will call you ' + user.name + ' from now on.');
-                                });
-                            });
-
-
-
-                        } else {
-                            // this happens if the conversation ended prematurely for some reason
-                            bot.reply(message, 'OK, nevermind!');
-                        }
-                    });
-                }
-            });
-        }
-    });
-});
-
-
-controller.hears(['uptime', 'ping', 'who are you', 'what is your name'],
-    'direct_message,direct_mention,mention', function (bot, message) {
-
-        var hostname = os.hostname();
-        var uptime = formatUptime(process.uptime());
-
-        bot.reply(message,
-            'I am a bot named <@' + bot.identity.name +
-            '>. I have been running for ' + uptime + ' on ' + hostname + '.');
-
-    });
-
-function formatUptime(uptime) {
-    var unit = 'second';
-    if (uptime > 60) {
-        uptime = uptime / 60;
-        unit = 'minute';
-    }
-    if (uptime > 60) {
-        uptime = uptime / 60;
-        unit = 'hour';
-    }
-    if (uptime != 1) {
-        unit = unit + 's';
-    }
-
-    uptime = uptime + ' ' + unit;
-    return uptime;
-}
