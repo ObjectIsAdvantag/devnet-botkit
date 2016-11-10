@@ -1,0 +1,6 @@
+# Node artefacts
+node_modules/
+
+# IDE
+.vscode/
+.idea/
