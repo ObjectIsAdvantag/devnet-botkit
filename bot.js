@@ -11,10 +11,16 @@ if (!process.env.token) {
 var Botkit = require('botkit');
 var os = require('os');
 
+//
+// Bot Adapter: uncomment one among Slack, Console
+//
+// var controller = Botkit.consolebot({
+//     debug: false,
+// });
+// var bot = controller.spawn();
 var controller = Botkit.slackbot({
     debug: false,
 });
-
 var bot = controller.spawn({
     token: process.env.token
 }).startRTM();
@@ -139,11 +145,11 @@ controller.hears(['show\s*(.*)', 'more\s*(.*)', 'about\s*(.*)'], 'direct_message
                     }
 
                     // not cancel, nor a number
-                    bot.reply(message, "sorry, not implemented yet! please specify a number for now...");
+                    bot.reply(message, 'cancelled!');
                 }
                 else {
-                    // this happens if the conversation was cancelled or ended prematurely for some reason
-                    bot.reply(message, 'cancelled!');
+                    // this happens if the conversation was ended prematurely for some reason
+                    bot.reply(message, "sorry, could not process your request, try again..");
                 }
             });
         });

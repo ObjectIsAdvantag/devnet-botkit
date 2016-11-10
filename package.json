@@ -1,16 +1,16 @@
 {
-  "name": "devnet-slackbot",
+  "name": "devnet-botkit",
   "version": "0.1.0",
-  "description": "Slack bot that shows current and upcoming events at Cisco DevNet",
+  "description": "Bot that shows current and upcoming events at Cisco DevNet",
   "main": "bot.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
-    "slack",
     "bot",
-    "devnet",
-    "cisco"
+    "samples",
+    "botkit",
+    "devnet"
   ],
   "author": "Stève Sfartz (Cisco DevNet)",
   "license": "MIT",
